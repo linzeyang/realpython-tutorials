@@ -5,3 +5,5 @@ hashtable/
 url-shortener-fastapi/
 ## Manage Your To-Do Lists Using Python and Django
 todo-list-django/
+## Build a Site Connectivity Checker in Python
+site-connectivity-checker/
