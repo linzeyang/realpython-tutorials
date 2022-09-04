@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+
+    marketplace:
+        build:
+            context: .
+            dockerfile: marketplace/Dockerfile
+        environment:
+            RECOMMENDATIONS_HOST: recommendations
+        image: hello-grpc-marketplace
+        networks:
+            - hello-grpc-network
+        ports:
+            - 5000:5000
+
+    recommendations:
+        build:
+            context: .
+            dockerfile: recommendations/Dockerfile
+        image: hello-grpc-recommendations
+        networks:
+            - hello-grpc-network
+
+networks:
+    hello-grpc-network:
