@@ -11,3 +11,5 @@ site-connectivity-checker/
 grpc-microservices/
 ## Get Started With Django Part 1: Build a Portfolio App
 portfolio-django/
+## Build a Flashcards App With Django
+flashcards-django/
