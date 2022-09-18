@@ -18,35 +18,32 @@ class HashTable:
     def values(self) -> list[Any]:
         return self._values
 
+    def _index(self, key: Hashable) -> int:
+        return hash(key) % len(self)
+
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        idx = hash(key) % len(self)
-        self._values[idx] = value
+        self.values[self._index(key)] = value
 
     def __getitem__(self, key: Hashable) -> Any:
-        idx = hash(key) % len(self)
-
-        if (value := self._values[idx]) is BLANK:
+        if (value := self.values[self._index(key)]) is BLANK:
             raise KeyError("missing_key")
 
         return value
 
     def __delitem__(self, key: Hashable) -> None:
-        idx = hash(key) % len(self)
-
-        if self._values[idx] is BLANK:
+        if key not in self:
             raise KeyError("missing_key")
 
-        self._values[idx] = BLANK
+        self[key] = BLANK
 
     def __contains__(self, key: Hashable) -> bool:
         try:
             self[key]
         except KeyError:
             return False
-        else:
-            return True
+        return True
 
-    def get(self, key, default: Any = None) -> Any:
+    def get(self, key: Hashable, default: Any = None) -> Any:
         try:
             return self[key]
         except KeyError:
