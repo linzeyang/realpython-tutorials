@@ -182,7 +182,7 @@ def test_should_return_keys():
     table["Bob"] = 42
     table["Joe"] = 42
 
-    assert sorted(table.keys) == ["Alice", "Bob", "Joe"]
+    assert sorted(table.keys) == ["Alice", "Bob", "Joe"]  # type: ignore
 
 
 def test_should_get_keys(hash_table: HashTable):
@@ -252,7 +252,7 @@ def test_should_create_hashtable_from_dict():
 
     table = HashTable.from_dict(dictionary)
 
-    assert table.capacity == len(dictionary) * 10
+    assert table.capacity == len(dictionary)
     assert set(table.keys) == set(dictionary.keys())
     assert set(table.pairs) == set(dictionary.items())
     assert sorted(table.values, key=hash) == sorted(dictionary.values(), key=hash)
@@ -407,3 +407,104 @@ def test_itervalues_should_iterate_values(hash_table: HashTable):
 
     assert len(values) == 3
     assert sorted(values, key=hash) == sorted([True, "hello", 37], key=hash)
+
+
+def test_should_deal_with_hash_collision():
+    table = HashTable(capacity=8)
+    table[1] = 1
+    table[9] = 9
+
+    assert 1 in table
+    assert table[1] == 1
+    assert 9 in table
+    assert table[9] == 9
+    assert len(table) == 2
+
+
+def test_should_raise_keyerror_retrieving_key():
+    table = HashTable(capacity=8)
+
+    for i in range(8):
+        table[i] = i
+
+    with pytest.raises(KeyError):
+        table[9]
+
+
+def test_should_raise_keyerror_deleting_key():
+    table = HashTable(capacity=8)
+
+    for i in range(8):
+        table[i] = i
+
+    with pytest.raises(KeyError):
+        del table[9]
+
+
+def test_should_resize_up():
+    table = HashTable(capacity=16)
+
+    for i in range(16):
+        table[i] = i
+
+    assert len(table) == 16
+    assert table.capacity == 16
+
+    table[16] = 16
+
+    assert len(table) == 17
+    assert table.capacity == 18
+    for i in range(17):
+        assert table[i] == i
+
+    table[17] = 17
+
+    assert len(table) == 18
+    assert table.capacity == 18
+    for i in range(18):
+        assert table[i] == i
+
+
+def test_should_resize_down():
+    table = HashTable(capacity=16)
+
+    for i in range(16):
+        table[i] = i
+
+    for i in range(9):
+        del table[i]
+
+    assert len(table) == 7
+    assert table.capacity == 8
+    for i in range(9, 16):
+        assert table[i] == i
+
+
+def test_should_not_resize_under_certain_condition():
+    table = HashTable(capacity=8)
+
+    for i in range(8):
+        table[i] = i
+
+    assert len(table) == 8
+    assert table.capacity == 8
+
+    del table[7]
+    table[7] = 7
+
+    assert table[7] == 7
+    assert len(table) == 8
+    assert table.capacity == 8
+
+    del table[7]
+    table[15] = 15
+
+    assert table[15] == 15
+    assert len(table) == 8
+    assert table.capacity == 8
+
+    for i in range(5):
+        del table[i]
+
+    assert len(table) == 3
+    assert table.capacity == 8

@@ -2,20 +2,23 @@
 
 from typing import Any, Hashable, NamedTuple
 
+DUMMY_STATE = -1
+LOAD_THRESHOLD = 0.66
+
 
 class Pair(NamedTuple):
-    key: Any
+    key: Hashable
     value: Any
 
 
 class HashTable:
     """A hashtable implementation"""
 
-    def __init__(self, capacity: int) -> None:
+    def __init__(self, capacity: int = 8) -> None:
         if capacity <= 0:
             raise ValueError("capacity should be positive integer")
 
-        self._slots = [None] * capacity
+        self._slots: list[Pair | int | None] = [None] * capacity
 
     def __len__(self) -> int:
         return len(self.pairs)
@@ -25,34 +28,61 @@ class HashTable:
         return len(self._slots)
 
     @property
-    def pairs(self) -> list[Any]:
-        return [slot for slot in self._slots if slot]
+    def pairs(self) -> list[Pair]:
+        return [slot for slot in self._slots if isinstance(slot, Pair)]
 
     @property
-    def keys(self) -> list[Any]:
+    def keys(self) -> list[Hashable]:
         return [pair.key for pair in self.pairs]
 
     @property
     def values(self) -> list[Any]:
         return [pair.value for pair in self.pairs]
 
+    @property
+    def load_factor(self) -> float:
+        return len([slot for slot in self._slots if slot is not None]) / self.capacity
+
     def _index(self, key: Hashable) -> int:
         return hash(key) % self.capacity
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        self._slots[self._index(key)] = Pair(key, value)  # type: ignore
+        for index, slot_value in self._probe(key):
+            if slot_value is None or (
+                isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key)
+            ):
+                self._slots[index] = Pair(key, value)
+                return
+
+        if (
+            (original_index := (index + 1) % self.capacity) == self._index(key)  # type: ignore
+            and self._slots[original_index] == DUMMY_STATE
+        ):
+            self._slots[original_index] = Pair(key, value)
+            return
+
+        self._resize_and_rehash()
+        self[key] = value
 
     def __getitem__(self, key: Hashable) -> Any:
-        if (pair := self._slots[self._index(key)]) is None:
-            raise KeyError(key)
+        for _, slot_value in self._probe(key):
+            if slot_value is None:
+                raise KeyError(key)
+            if isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key):
+                return slot_value.value
 
-        return pair.value
+        raise KeyError(key)
 
     def __delitem__(self, key: Hashable) -> None:
-        if key not in self:
-            raise KeyError(key)
+        for index, slot_value in self._probe(key):
+            if slot_value is None:
+                raise KeyError(key)
+            if isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key):
+                self._slots[index] = DUMMY_STATE
+                self._resize_and_rehash()
+                return
 
-        self._slots[self._index(key)] = None
+        raise KeyError(key)
 
     def __contains__(self, key: Hashable) -> bool:
         try:
@@ -82,6 +112,35 @@ class HashTable:
 
         return False
 
+    def _probe(self, key: Hashable):
+        """A helper method"""
+        index = self._index(key)
+
+        for _ in range(self.capacity):
+            yield index, self._slots[index]
+            index = (index + 1) % self.capacity
+
+    def _resize_and_rehash(self) -> None:
+        if len(self) == self.capacity:
+            new_capacity = self.capacity + (self.capacity >> 3)
+
+            if new_capacity == self.capacity:
+                new_capacity += 1
+        elif self._slots.count(DUMMY_STATE) > (self.capacity >> 1):
+            new_capacity = max(8, self.capacity >> 1)
+
+            if new_capacity == self.capacity:
+                return
+        else:
+            return
+
+        old_slots = self._slots
+        self._slots = [None] * new_capacity
+
+        for slot in old_slots:
+            if isinstance(slot, Pair):
+                self[slot.key] = slot.value
+
     def get(self, key: Hashable, default: Any = None) -> Any:
         try:
             return self[key]
@@ -90,7 +149,7 @@ class HashTable:
 
     @classmethod
     def from_dict(cls, source: dict, capacity: int | None = None):
-        new = cls(capacity or len(source) * 10)
+        new = cls(capacity or len(source))
 
         for key, value in source.items():
             new[key] = value
@@ -99,9 +158,6 @@ class HashTable:
 
     def copy(self):
         return self.__class__.from_dict(dict(self.pairs), self.capacity)
-        # new = HashTable(self.capacity)
-        # new._slots = self._slots.copy()
-        # return new
 
     def clear(self) -> None:
         for idx, slot in enumerate(self._slots):
@@ -131,20 +187,19 @@ class HashTable:
 
         raise TypeError("incompatible object")
 
-    def setdefault(self, key: Any, default: Any, /) -> Any:
+    def setdefault(self, key: Hashable, default: Any, /) -> Any:
         if key not in self:
             self[key] = default
 
         return self[key]
 
-    def pop(self, key: Any, /, default: Any = None) -> Any:
+    def pop(self, key: Hashable, /, default: Any = None) -> Any:
         if key not in self:
             if default is None:
                 raise KeyError(key)
             return default
 
         value = self[key]
-
         del self[key]
 
         return value
@@ -152,17 +207,16 @@ class HashTable:
     # my own impremetation!
     def iteritems(self):
         for slot in self._slots:
-            if slot is not None:
+            if isinstance(slot, Pair):
                 yield slot.key, slot.value
 
     def iterkeys(self):
         for slot in self._slots:
-            if slot is not None:
+            if isinstance(slot, Pair):
                 yield slot.key
 
     def itervalues(self):
         for slot in self._slots:
-            if slot is not None:
+            if isinstance(slot, Pair):
                 yield slot.value
-
     # ...
