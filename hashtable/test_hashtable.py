@@ -2,6 +2,7 @@
 
 import pytest
 
+from collections import deque
 from hashtable import HashTable
 
 
@@ -39,7 +40,7 @@ def test_should_report_length(hash_table: HashTable):
 
 @pytest.mark.parametrize("num", (5, 10))
 def test_should_create_empty_pair_slots(num: int):
-    assert HashTable(capacity=num)._slots == [None] * num
+    assert HashTable(capacity=num)._buckets == [deque()] * num
 
 
 def test_should_insert_key_value_pairs(hash_table: HashTable):
@@ -413,12 +414,15 @@ def test_should_deal_with_hash_collision():
     table = HashTable(capacity=8)
     table[1] = 1
     table[9] = 9
+    table[17] = 17
 
     assert 1 in table
     assert table[1] == 1
     assert 9 in table
     assert table[9] == 9
-    assert len(table) == 2
+    assert 17 in table
+    assert table[17] == 17
+    assert len(table) == 3
 
 
 def test_should_raise_keyerror_retrieving_key():
@@ -441,6 +445,10 @@ def test_should_raise_keyerror_deleting_key():
         del table[9]
 
 
+@pytest.mark.skipif(
+    not hasattr(HashTable, "_resize_and_rehash"),
+    reason="Testable only when resizing is implemented",
+)
 def test_should_resize_up():
     table = HashTable(capacity=16)
 
@@ -465,6 +473,10 @@ def test_should_resize_up():
         assert table[i] == i
 
 
+@pytest.mark.skipif(
+    not hasattr(HashTable, "_resize_and_rehash"),
+    reason="Testable only when resizing is implemented",
+)
 def test_should_resize_down():
     table = HashTable(capacity=16)
 
@@ -480,6 +492,10 @@ def test_should_resize_down():
         assert table[i] == i
 
 
+@pytest.mark.skipif(
+    not hasattr(HashTable, "_resize_and_rehash"),
+    reason="Testable only when resizing is implemented",
+)
 def test_should_not_resize_under_certain_condition():
     table = HashTable(capacity=8)
 

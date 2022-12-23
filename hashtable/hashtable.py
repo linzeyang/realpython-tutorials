@@ -1,5 +1,6 @@
 """This is a hashtable"""
 
+from collections import deque
 from typing import Any, Hashable, NamedTuple
 
 DUMMY_STATE = -1
@@ -18,18 +19,19 @@ class HashTable:
         if capacity <= 0:
             raise ValueError("capacity should be positive integer")
 
-        self._slots: list[Pair | int | None] = [None] * capacity
+        self._buckets: list[deque[Pair]] = [deque() for _ in range(capacity)]
+        self._key_insertion_order: list[Hashable] = []
 
     def __len__(self) -> int:
         return len(self.pairs)
 
     @property
     def capacity(self) -> int:
-        return len(self._slots)
+        return len(self._buckets)
 
     @property
     def pairs(self) -> list[Pair]:
-        return [slot for slot in self._slots if isinstance(slot, Pair)]
+        return [Pair(key, self[key]) for key in self._key_insertion_order]
 
     @property
     def keys(self) -> list[Hashable]:
@@ -41,45 +43,36 @@ class HashTable:
 
     @property
     def load_factor(self) -> float:
-        return len([slot for slot in self._slots if slot is not None]) / self.capacity
+        return len(self) / self.capacity
 
     def _index(self, key: Hashable) -> int:
         return hash(key) % self.capacity
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        for index, slot_value in self._probe(key):
-            if slot_value is None or (
-                isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key)
-            ):
-                self._slots[index] = Pair(key, value)
+        queue = self._buckets[self._index(key)]
+
+        for idx, pair in enumerate(queue):
+            if hash(pair.key) == hash(key):
+                queue[idx] = Pair(key, value)
                 return
 
-        if (
-            (original_index := (index + 1) % self.capacity) == self._index(key)  # type: ignore
-            and self._slots[original_index] == DUMMY_STATE
-        ):
-            self._slots[original_index] = Pair(key, value)
-            return
-
-        self._resize_and_rehash()
-        self[key] = value
+        queue.append(Pair(key, value))
+        self._key_insertion_order.append(key)
 
     def __getitem__(self, key: Hashable) -> Any:
-        for _, slot_value in self._probe(key):
-            if slot_value is None:
-                raise KeyError(key)
-            if isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key):
-                return slot_value.value
+        for pair in self._buckets[self._index(key)]:
+            if hash(key) == hash(pair.key):
+                return pair.value
 
         raise KeyError(key)
 
     def __delitem__(self, key: Hashable) -> None:
-        for index, slot_value in self._probe(key):
-            if slot_value is None:
-                raise KeyError(key)
-            if isinstance(slot_value, Pair) and hash(slot_value.key) == hash(key):
-                self._slots[index] = DUMMY_STATE
-                self._resize_and_rehash()
+        queue = self._buckets[self._index(key)]
+
+        for pair in queue:
+            if hash(pair.key) == hash(key):
+                queue.remove(pair)
+                self._key_insertion_order.remove(key)
                 return
 
         raise KeyError(key)
@@ -92,7 +85,7 @@ class HashTable:
         return True
 
     def __iter__(self):
-        yield from self.iterkeys()
+        yield from iter(self._key_insertion_order)
 
     def __str__(self) -> str:
         return f"{{{', '.join(f'{key!r}: {value!r}' for key, value in self.pairs)}}}"
@@ -112,34 +105,34 @@ class HashTable:
 
         return False
 
-    def _probe(self, key: Hashable):
-        """A helper method"""
-        index = self._index(key)
+    # def _probe(self, key: Hashable):
+    #     """A helper method"""
+    #     index = self._index(key)
 
-        for _ in range(self.capacity):
-            yield index, self._slots[index]
-            index = (index + 1) % self.capacity
+    #     for _ in range(self.capacity):
+    #         yield index, self._slots[index]
+    #         index = (index + 1) % self.capacity
 
-    def _resize_and_rehash(self) -> None:
-        if len(self) == self.capacity:
-            new_capacity = self.capacity + (self.capacity >> 3)
+    # def _resize_and_rehash(self) -> None:
+    #     if len(self) == self.capacity:
+    #         new_capacity = self.capacity + (self.capacity >> 3)
 
-            if new_capacity == self.capacity:
-                new_capacity += 1
-        elif self._slots.count(DUMMY_STATE) > (self.capacity >> 1):
-            new_capacity = max(8, self.capacity >> 1)
+    #         if new_capacity == self.capacity:
+    #             new_capacity += 1
+    #     elif self._slots.count(DUMMY_STATE) > (self.capacity >> 1):
+    #         new_capacity = max(8, self.capacity >> 1)
 
-            if new_capacity == self.capacity:
-                return
-        else:
-            return
+    #         if new_capacity == self.capacity:
+    #             return
+    #     else:
+    #         return
 
-        old_slots = self._slots
-        self._slots = [None] * new_capacity
+    #     old_slots = self._slots
+    #     self._slots = [None] * new_capacity
 
-        for slot in old_slots:
-            if isinstance(slot, Pair):
-                self[slot.key] = slot.value
+    #     for slot in old_slots:
+    #         if isinstance(slot, Pair):
+    #             self[slot.key] = slot.value
 
     def get(self, key: Hashable, default: Any = None) -> Any:
         try:
@@ -160,9 +153,10 @@ class HashTable:
         return self.__class__.from_dict(dict(self.pairs), self.capacity)
 
     def clear(self) -> None:
-        for idx, slot in enumerate(self._slots):
-            if slot is not None:
-                self._slots[idx] = None
+        for idx in range(self.capacity):
+            self._buckets[idx] = deque()
+
+        self._key_insertion_order.clear()
 
     def update(self, other: object = None, /, **kwargs) -> None:
         # only consider kwargs if other is not given
@@ -206,17 +200,17 @@ class HashTable:
 
     # my own impremetation!
     def iteritems(self):
-        for slot in self._slots:
-            if isinstance(slot, Pair):
-                yield slot.key, slot.value
+        for queue in self._buckets:
+            for pair in queue:
+                yield pair.key, pair.value
 
     def iterkeys(self):
-        for slot in self._slots:
-            if isinstance(slot, Pair):
-                yield slot.key
+        for queue in self._buckets:
+            for pair in queue:
+                yield pair.key
 
     def itervalues(self):
-        for slot in self._slots:
-            if isinstance(slot, Pair):
-                yield slot.value
+        for queue in self._buckets:
+            for pair in queue:
+                yield pair.value
     # ...
