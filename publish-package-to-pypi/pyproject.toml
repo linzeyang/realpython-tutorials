@@ -1,0 +1,91 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "zeyanglin-test-realpython-reader"
+version = "1.2.0"
+description = "Read the latest Real Python tutorials"
+authors = ["Zeyang Lin <4020306+linzeyang@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/realpython/reader"
+documentation = "https://realpython.com/pypi-publish-python-package/"
+keywords = ["feed", "reader", "tutorial"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Internet :: WWW/HTTP"
+]
+include = ["reader/*.toml"]
+packages = [
+    { include = "reader" }
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/realpython/reader/issues"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+feedparser = "^6.0"
+html2text = ">= 2020.1.16"
+tomli = {version = "*", python = "< 3.11"}
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+bumpver = "*"
+isort = "*"
+mypy = "*"
+pytest = "*"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "pypi_test_pub"
+priority = "primary"
+url = "https://test.pypi.org/legacy/"
+
+[tool.poetry.scripts]
+realpython = "reader.__main__:main"
+
+[tool.bumpver]
+current_version = "1.2.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"reader/__init__.py" = ["{version}"]
+"reader/__main__.py" = ["- realpython-reader v{version}"]
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = "feedparser"
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.isort]
+py_version=310
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = "88"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"

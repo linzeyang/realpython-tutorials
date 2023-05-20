@@ -13,3 +13,7 @@ grpc-microservices/
 portfolio-django/
 ## Build a Flashcards App With Django
 flashcards-django/
+## Generate Images With DALL·E 2 and the OpenAI API
+openai-dall-e-2/
+## Publish an Open-Source Python Package to PyPI
+publish-package-to-pypi/
