@@ -17,3 +17,5 @@ flashcards-django/
 openai-dall-e-2/
 ## Publish an Open-Source Python Package to PyPI
 publish-package-to-pypi/
+## Embeddings and Vector Databases With ChromaDB
+vectordb-with-chromadb/
