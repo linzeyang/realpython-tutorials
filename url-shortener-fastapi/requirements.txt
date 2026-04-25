@@ -1,5 +1,5 @@
 fastapi==0.109.1
-python-dotenv==0.20.0
+python-dotenv==1.2.2
 sqlalchemy==1.4.40
 uvicorn==0.18.3
 validators==0.20.0
