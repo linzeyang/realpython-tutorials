@@ -3,5 +3,5 @@ jupyterlab==4.5.10
 more-itertools==10.2.0
 openai==1.7.0
 polars==0.20.3
-sentence-transformers==2.2.2
+sentence-transformers==5.6.0
 torch==2.13.0
